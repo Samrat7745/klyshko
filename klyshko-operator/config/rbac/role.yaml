@@ -1,9 +1,7 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
@@ -18,29 +16,7 @@ rules:
   - ""
   resources:
   - persistentvolumeclaims
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - pods
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - services
   verbs:
   - create
@@ -54,57 +30,7 @@ rules:
   - klyshko.carbnyestack.io
   resources:
   - tuplegenerationjobs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
-  - tuplegenerationjobs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
-  - tuplegenerationjobs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
   - tuplegenerationschedulers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
-  - tuplegenerationschedulers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
-  - tuplegenerationschedulers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - klyshko.carbnyestack.io
-  resources:
   - tuplegenerationtasks
   verbs:
   - create
@@ -117,12 +43,16 @@ rules:
 - apiGroups:
   - klyshko.carbnyestack.io
   resources:
+  - tuplegenerationjobs/finalizers
+  - tuplegenerationschedulers/finalizers
   - tuplegenerationtasks/finalizers
   verbs:
   - update
 - apiGroups:
   - klyshko.carbnyestack.io
   resources:
+  - tuplegenerationjobs/status
+  - tuplegenerationschedulers/status
   - tuplegenerationtasks/status
   verbs:
   - get
