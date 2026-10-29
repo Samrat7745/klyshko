@@ -356,7 +356,7 @@ func (r *TupleGenerationTaskReconciler) getOrCreatePVC(ctx context.Context, key 
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				v1.ReadWriteOnce,
 			},
-			Resources: v1.ResourceRequirements{
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					"storage": resource.MustParse("100Mi"), // TODO Can this be computed from the number of tuples?
 				},

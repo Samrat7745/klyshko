@@ -31,12 +31,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const (
@@ -172,9 +174,10 @@ type Controller interface {
 
 func (vcp *vcp) setupControllers(ctx context.Context, vcpID int, etcdClient *clientv3.Client, castorURL string) error {
 	k8sManager, err := ctrl.NewManager(vcp.cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: "0",                                             // Avoid colliding metrics servers by disabling
-		Logger:             logf.Log.WithName(fmt.Sprintf("vcp-%d", vcpID)), // use scoped logger to ease debugging
+		Scheme:     scheme.Scheme,
+		Metrics:    metricsserver.Options{BindAddress: "0"},             // Avoid colliding metrics servers by disabling
+		Controller: config.Controller{SkipNameValidation: ptr.To(true)}, // several VCPs run in one process
+		Logger:     logf.Log.WithName(fmt.Sprintf("vcp-%d", vcpID)),     // use scoped logger to ease debugging
 	})
 	if err != nil {
 		return err
@@ -534,8 +537,8 @@ func ensurePodsCreatedOnEachVcp(ctx context.Context, vc *vc, name func(int) type
 			APIVersion:         owner(i).GetObjectKind().GroupVersionKind().GroupVersion().String(),
 			UID:                owner(i).GetUID(),
 			Name:               owner(i).GetName(),
-			Controller:         pointer.Bool(true),
-			BlockOwnerDeletion: pointer.Bool(true),
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
 		}
 		Expect(pod.OwnerReferences).To(ContainElement(expectedOwnerReference))
 		pods[i] = *pod
@@ -637,8 +640,8 @@ func ensureTasksCreatedOnEachVcp(
 			APIVersion:         jobs[i].APIVersion,
 			UID:                jobs[i].UID,
 			Name:               jobs[i].Name,
-			Controller:         pointer.Bool(true),
-			BlockOwnerDeletion: pointer.Bool(true),
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
 		}
 		Expect(localTasks[i].OwnerReferences).To(ContainElement(expectedOwnerReference))
 	}
