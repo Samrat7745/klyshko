@@ -32,10 +32,13 @@ import (
 const (
 	// headsKey is the key prefix used to store the player head revisions in etcd.
 	headsKey = "/klyshko/heads"
-
-	// headRevisionOpRetryPeriod defines the duration between two attempts to store or fetch the head revision in etcd.
-	headRevisionOpRetryPeriod = 5 * time.Second
 )
+
+// headRevisionOpRetryPeriod defines the duration between two attempts to store or fetch the head revision in etcd.
+var headRevisionOpRetryPeriod = 5 * time.Second
+
+// watchRetryPeriod defines the duration to wait before re-registering a failed or closed watch.
+var watchRetryPeriod = 250 * time.Millisecond
 
 // TupleGenerationJobReconciler reconciles a TupleGenerationJob object.
 type TupleGenerationJobReconciler struct {
@@ -173,37 +176,12 @@ func (r *TupleGenerationJobReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	logger.V(logging.DEBUG).Info("Collected statuses of owned tasks", "Tasks", ownedBy)
 
-	// Helper functions; TODO Consider moving this to state class
-	allTerminated := func(tasks []klyshkov1alpha1.TupleGenerationTask) bool {
-		for _, t := range tasks {
-			if t.Status.State != klyshkov1alpha1.TaskCompleted && t.Status.State != klyshkov1alpha1.TaskFailed {
-				return false
-			}
-		}
-		return true
-	}
-	anyFailed := func(tasks []klyshkov1alpha1.TupleGenerationTask) bool {
-		for _, t := range tasks {
-			if t.Status.State == klyshkov1alpha1.TaskFailed {
-				return true
-			}
-		}
-		return false
-	}
 	numberOfVCPs, err := numberOfVCPs(ctx, &r.Client, req.Namespace)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: 60 * time.Second}, fmt.Errorf("can't read playerCount from VCP configuration: %w", err)
 	}
-	var state klyshkov1alpha1.TupleGenerationJobState
-	if uint(len(ownedBy)) < numberOfVCPs {
-		state = klyshkov1alpha1.JobPending
-	} else if !allTerminated(ownedBy) {
-		state = klyshkov1alpha1.JobRunning
-	} else if anyFailed(ownedBy) {
-		state = klyshkov1alpha1.JobFailed
-	} else if job.Status.State != klyshkov1alpha1.JobCompleted {
-		state = klyshkov1alpha1.JobCompleted
-
+	state, activate := computeJobState(job.Status.State, ownedBy, numberOfVCPs)
+	if activate {
 		// Activate tuples; TODO How to deal with failures here? Introduce JobActivating state, how to sync between VCPs?
 		tupleChunkID, err := uuid.Parse(job.Spec.ID)
 		if err != nil {
@@ -227,6 +205,33 @@ func (r *TupleGenerationJobReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	logger.V(logging.DEBUG).Info("Desired state reached")
 	return ctrl.Result{}, nil
+}
+
+// computeJobState derives the desired state of a job from its current state, the tasks owned by the job, and the number
+// of VCPs. The returned flag is true iff the job transitions to JobCompleted, i.e., if tuples have to be activated.
+func computeJobState(current klyshkov1alpha1.TupleGenerationJobState, owned []klyshkov1alpha1.TupleGenerationTask, numberOfVCPs uint) (state klyshkov1alpha1.TupleGenerationJobState, activate bool) {
+	allTerminated := true
+	anyFailed := false
+	for _, t := range owned {
+		if t.Status.State != klyshkov1alpha1.TaskCompleted && t.Status.State != klyshkov1alpha1.TaskFailed {
+			allTerminated = false
+		}
+		if t.Status.State == klyshkov1alpha1.TaskFailed {
+			anyFailed = true
+		}
+	}
+	switch {
+	case uint(len(owned)) < numberOfVCPs:
+		return klyshkov1alpha1.JobPending, false
+	case !allTerminated:
+		return klyshkov1alpha1.JobRunning, false
+	case anyFailed:
+		return klyshkov1alpha1.JobFailed, false
+	case current != klyshkov1alpha1.JobCompleted:
+		return klyshkov1alpha1.JobCompleted, true
+	}
+	// Already completed: no state change (empty state is not valid and hence ignored by the caller).
+	return "", false
 }
 
 // taskForJob assembles the TupleGenerationJob resource description for the given job and VCP.
@@ -294,22 +299,33 @@ func (r *TupleGenerationJobReconciler) setHeadRevision(ctx context.Context, name
 
 // handleWatchEvents handles incoming etcd events and dispatches them individually to handleWatchEvent.
 func (r *TupleGenerationJobReconciler) handleWatchEvents() {
+	r.runWatchLoop(context.Background(), "default")
+}
 
-	for {
-		ctx, cancel := context.WithCancel(context.Background())
+// runWatchLoop watches the roster prefix in etcd, starting after the stored head revision, until parent is cancelled.
+// Failures (etcd unavailable, watch errors) are retried.
+func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, namespace string) {
+	sleep := func(d time.Duration) {
+		select {
+		case <-time.After(d):
+		case <-parent.Done():
+		}
+	}
+	for parent.Err() == nil {
+		ctx, cancel := context.WithCancel(parent)
 		retrySleep := func(err error) {
 			r.Logger.Error(err,
 				"Failed to fetch / store head revision - sleeping before next attempt",
 				"Duration", headRevisionOpRetryPeriod)
-			time.Sleep(headRevisionOpRetryPeriod)
-			cancel()
+			sleep(headRevisionOpRetryPeriod)
 		}
 
 		// Read this players head revision and start watching for subsequent events. This will replay
 		// historical / missed events, in case the current etcd revision is higher than the head revision.
-		revision, err := r.getHeadRevision(ctx, "default")
+		revision, err := r.getHeadRevision(ctx, namespace)
 		if err != nil {
 			retrySleep(err)
+			cancel()
 			continue
 		}
 		watchRev := revision + 1
@@ -320,17 +336,30 @@ func (r *TupleGenerationJobReconciler) handleWatchEvents() {
 		for watchResponse := range rosterWatcherCh {
 			if watchResponse.Err() != nil {
 				r.Logger.Error(watchResponse.Err(), "watch failed - reestablishing")
-				cancel()
+				if watchResponse.CompactRevision != 0 {
+					// The head revision has been compacted away; re-registering with it would fail forever. Resume
+					// from the oldest available revision instead (events in between are lost).
+					if err := r.setHeadRevision(parent, namespace, watchResponse.CompactRevision-1); err != nil {
+						retrySleep(err)
+					}
+				} else {
+					sleep(watchRetryPeriod)
+				}
 				break
 			}
 			for _, ev := range watchResponse.Events {
 				r.handleWatchEvent(ctx, ev)
 			}
-			err := r.setHeadRevision(ctx, "default", watchResponse.Header.Revision)
+			err := r.setHeadRevision(ctx, namespace, watchResponse.Header.Revision)
 			if err != nil {
 				retrySleep(err)
 				break
 			}
+		}
+		cancel()
+		if parent.Err() == nil {
+			// Watch channel closed without error (e.g. etcd connection dropped) - avoid a hot loop
+			sleep(watchRetryPeriod)
 		}
 	}
 }

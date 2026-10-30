@@ -17,7 +17,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 )
+
+// DefaultRequestTimeout bounds each request to Castor so that a stalled service cannot block a reconciliation forever.
+const DefaultRequestTimeout = 60 * time.Second
 
 // Client is a client for the Castor tuple store.
 type Client struct {
@@ -29,7 +33,7 @@ type Client struct {
 func NewClient(url string) *Client {
 	return &Client{
 		URL:    url,
-		client: &http.Client{},
+		client: &http.Client{Timeout: DefaultRequestTimeout},
 	}
 }
 
@@ -46,9 +50,6 @@ func (c Client) ActivateTupleChunk(ctx context.Context, chunkID uuid.UUID) error
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("received response with status code %d", resp.StatusCode)
-	}
 	defer func() {
 		_, err := io.Copy(ioutil.Discard, resp.Body)
 		if err != nil {
@@ -59,6 +60,9 @@ func (c Client) ActivateTupleChunk(ctx context.Context, chunkID uuid.UUID) error
 			logger.Error(err, "Failed to close response from castor")
 		}
 	}()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received response with status code %d", resp.StatusCode)
+	}
 	logger.V(logging.DEBUG).Info("Response from castor", "Status", resp.Status)
 	return nil
 }
@@ -109,17 +113,17 @@ func (c Client) GetTelemetry(ctx context.Context) (Telemetry, error) {
 		logger.Error(err, "Failed to fetch castor telemetry data")
 		return Telemetry{}, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return Telemetry{}, fmt.Errorf("received response with status code %d", resp.StatusCode)
-	}
-
-	// Read, parse, and return telemetry response
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
 			logger.Error(err, "Failed to close response from castor")
 		}
 	}()
+	if resp.StatusCode != http.StatusOK {
+		return Telemetry{}, fmt.Errorf("received response with status code %d", resp.StatusCode)
+	}
+
+	// Read, parse, and return telemetry response
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return Telemetry{}, fmt.Errorf("failed to read response body")

@@ -44,6 +44,25 @@ jobs:
         with:
           go-version: '1.26'
           cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/go.sum
+      - name: Install helm (chart render tests)
+        uses: azure/setup-helm@v4
+      - name: Unit and property tests with race detector and coverage floor
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        # Everything that does not need envtest (the Ginkgo suite in ./controllers is skipped here and run by
+        # "make test" below). Floor = coverage measured when introduced (57.6%) minus 2 points.
+        run: |
+          go test -race -p 2 -skip 'TestControllers' \
+            -coverpkg=./controllers/...,./castor/...,./api/... -coverprofile=unit-cover.out \
+            ./castor ./api/... ./charts ./controllers
+          scripts/check-coverage.sh unit-cover.out 55.5
+      - name: Fuzz smoke tests
+        if: ${{ github.event_name == 'pull_request' }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          go test ./controllers -skip 'TestControllers' -run '^$' -fuzz '^FuzzParseKey$' -fuzztime 15s
+          go test ./controllers -skip 'TestControllers' -run '^$' -fuzz '^FuzzUnmarshalTaskStatus$' -fuzztime 15s
+          go test ./controllers -skip 'TestControllers' -run '^$' -fuzz '^FuzzTaskNames$' -fuzztime 15s
+          go test ./castor -skip 'TestCastorClient' -run '^$' -fuzz '^FuzzTelemetryJSON$' -fuzztime 15s
       - name: Build and Test
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |

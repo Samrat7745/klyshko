@@ -76,6 +76,12 @@ func (s *LotterySchedulingStrategy) Schedule(
 		return nil
 	}
 
+	// Guard against non-positive weights (rand.Intn panics for n <= 0); the API enforces priority > 0
+	if weightSum <= 0 {
+		logger.V(logging.DEBUG).Info("No positive weights among eligible tuple types")
+		return nil
+	}
+
 	// Randomly select a tuple type with probability determined by their individual weight and the sum of all weights
 	r := rand.Intn(weightSum)
 	current := 0
