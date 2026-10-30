@@ -457,12 +457,13 @@ var _ = Describe("Generating tuples", func() {
 					Expect(vc.vcps[i].k8sClient.Status().Update(ctx, &pod)).Should(Succeed())
 				}
 
-				// Ensure that castor activate tuple chunk endpoint has been called on each VCP
+				// Ensure that castor activate tuple chunk endpoint has been called on each VCP. Activation is idempotent and
+				// delivered at least once: if the job status update following the activation hits a conflict, the
+				// reconciler activates again. The mock counts calls of all VCPs, hence "at least" one call per VCP.
 				activationURL := fmt.Sprintf("PUT http://cs-castor.default.svc.cluster.local:10100/intra-vcp/tuple-chunks/activate/%s", jobs[0].Spec.ID)
-				Eventually(func() bool {
-					info := httpmock.GetCallCountInfo()
-					return info[activationURL] == NumberOfVCPs
-				}, Timeout, PollingInterval).Should(BeTrue())
+				Eventually(func() int {
+					return httpmock.GetCallCountInfo()[activationURL]
+				}, Timeout, PollingInterval).Should(BeNumerically(">=", NumberOfVCPs))
 
 				// Ensure that resources get deleted.
 				// As of https://book-v2.book.kubebuilder.io/reference/envtest.html#testing-considerations garbage
