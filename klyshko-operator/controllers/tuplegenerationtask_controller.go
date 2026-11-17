@@ -108,6 +108,9 @@ func (r *TupleGenerationTaskReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	if resp.Count == 0 {
 		status, err := json.Marshal(&klyshkov1alpha1.TupleGenerationTaskStatus{State: klyshkov1alpha1.TaskPreparing})
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to marshal roster entry for task %v: %w", req.Name, err)
+		}
 		_, err = r.EtcdClient.Put(ctx, taskKey.ToEtcdKey(), string(status))
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to create roster entry for task %v: %w", req.Name, err)
