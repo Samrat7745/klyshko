@@ -25,9 +25,5 @@ func taskNameForJob(job *klyshkov1alpha1.TupleGenerationJob, playerID uint) stri
 
 // jobName returns the name of the job the given task belongs to.
 func jobNameFromTaskName(taskName string) string {
-	idx := strings.LastIndex(taskName, "-")
-	if idx < 0 {
-		return taskName
-	}
-	return taskName[:idx]
+	return taskName[:strings.LastIndex(taskName, "-")]
 }

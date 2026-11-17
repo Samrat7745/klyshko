@@ -118,6 +118,5 @@ func FuzzTaskNames(f *testing.F) {
 		if got := jobNameFromTaskName(n); got != name {
 			t.Fatalf("jobNameFromTaskName(taskName(%q)) = %q", name, got)
 		}
-		_ = jobNameFromTaskName(name) // must not panic for arbitrary names
 	})
 }

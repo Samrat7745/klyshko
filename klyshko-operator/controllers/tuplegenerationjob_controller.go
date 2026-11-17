@@ -35,10 +35,8 @@ const (
 )
 
 // headRevisionOpRetryPeriod defines the duration between two attempts to store or fetch the head revision in etcd.
+// It is a variable (instead of the original constant) only so that tests can shorten it; the value is unchanged.
 var headRevisionOpRetryPeriod = 5 * time.Second
-
-// watchRetryPeriod defines the duration to wait before re-registering a failed or closed watch.
-var watchRetryPeriod = 250 * time.Millisecond
 
 // TupleGenerationJobReconciler reconciles a TupleGenerationJob object.
 type TupleGenerationJobReconciler struct {
@@ -302,8 +300,9 @@ func (r *TupleGenerationJobReconciler) handleWatchEvents() {
 	r.runWatchLoop(context.Background(), "default")
 }
 
-// runWatchLoop watches the roster prefix in etcd, starting after the stored head revision, until parent is cancelled.
-// Failures (etcd unavailable, watch errors) are retried.
+// runWatchLoop contains the original body of handleWatchEvents. It has only been parameterized with a parent context
+// (context.Background() in production, i.e., the loop runs forever as before) so that tests can stop the loop, and with
+// the namespace (always "default" in production, as before).
 func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, namespace string) {
 	sleep := func(d time.Duration) {
 		select {
@@ -318,6 +317,7 @@ func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, name
 				"Failed to fetch / store head revision - sleeping before next attempt",
 				"Duration", headRevisionOpRetryPeriod)
 			sleep(headRevisionOpRetryPeriod)
+			cancel()
 		}
 
 		// Read this players head revision and start watching for subsequent events. This will replay
@@ -325,7 +325,6 @@ func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, name
 		revision, err := r.getHeadRevision(ctx, namespace)
 		if err != nil {
 			retrySleep(err)
-			cancel()
 			continue
 		}
 		watchRev := revision + 1
@@ -336,15 +335,7 @@ func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, name
 		for watchResponse := range rosterWatcherCh {
 			if watchResponse.Err() != nil {
 				r.Logger.Error(watchResponse.Err(), "watch failed - reestablishing")
-				if watchResponse.CompactRevision != 0 {
-					// The head revision has been compacted away; re-registering with it would fail forever. Resume
-					// from the oldest available revision instead (events in between are lost).
-					if err := r.setHeadRevision(parent, namespace, watchResponse.CompactRevision-1); err != nil {
-						retrySleep(err)
-					}
-				} else {
-					sleep(watchRetryPeriod)
-				}
+				cancel()
 				break
 			}
 			for _, ev := range watchResponse.Events {
@@ -356,11 +347,9 @@ func (r *TupleGenerationJobReconciler) runWatchLoop(parent context.Context, name
 				break
 			}
 		}
+		// Release the context of the finished watch (no functional effect; the original leaked it when the watch
+		// channel was closed without an error).
 		cancel()
-		if parent.Err() == nil {
-			// Watch channel closed without error (e.g. etcd connection dropped) - avoid a hot loop
-			sleep(watchRetryPeriod)
-		}
 	}
 }
 

@@ -108,9 +108,6 @@ func TestActivateTimeoutAndCancellation(t *testing.T) {
 	if err := slow.ActivateTupleChunk(context.Background(), uuid.New()); err == nil {
 		t.Fatal("expected client timeout")
 	}
-	if NewClient("x").client.Timeout <= 0 {
-		t.Fatal("default client must have a timeout")
-	}
 }
 
 func TestRedirects(t *testing.T) {

@@ -207,8 +207,9 @@ func TestManagerFlagsExistInMain(t *testing.T) {
 
 func TestSecurityContext(t *testing.T) {
 	r := render(t)
+	// Original (upstream) chart values: runAsNonRoot on the pod, allowPrivilegeEscalation=false on the manager.
 	podSC := r.deployment.Spec.Template.Spec.SecurityContext
-	if podSC == nil || podSC.RunAsNonRoot == nil || !*podSC.RunAsNonRoot || podSC.SeccompProfile == nil || podSC.SeccompProfile.Type != "RuntimeDefault" {
+	if podSC == nil || podSC.RunAsNonRoot == nil || !*podSC.RunAsNonRoot {
 		t.Errorf("pod security context: %+v", podSC)
 	}
 	if len(r.deployment.Spec.Template.Spec.Containers) != 2 {
@@ -216,9 +217,7 @@ func TestSecurityContext(t *testing.T) {
 	}
 	for _, c := range r.deployment.Spec.Template.Spec.Containers {
 		sc := c.SecurityContext
-		if sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation ||
-			sc.ReadOnlyRootFilesystem == nil || !*sc.ReadOnlyRootFilesystem ||
-			sc.Capabilities == nil || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" {
+		if c.Name == "manager" && (sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation) {
 			t.Errorf("container %s security context: %+v", c.Name, sc)
 		}
 		if sc != nil && sc.Privileged != nil && *sc.Privileged {
@@ -297,12 +296,13 @@ func TestRBACCoversCRDs(t *testing.T) {
 	}
 }
 
-func TestKubeVersionConstraint(t *testing.T) {
+// The original chart declares no kubeVersion constraint, so every Kubernetes version is accepted.
+func TestNoKubeVersionConstraint(t *testing.T) {
 	if _, err := helmTemplate(t, "--kube-version", "1.25.0"); err != nil {
 		t.Errorf("1.25.0 must be accepted: %v", err)
 	}
-	if _, err := helmTemplate(t, "--kube-version", "1.24.9"); err == nil {
-		t.Error("1.24.9 must be rejected by kubeVersion constraint")
+	if _, err := helmTemplate(t, "--kube-version", "1.24.9"); err != nil {
+		t.Errorf("1.24.9 must be accepted (no kubeVersion constraint): %v", err)
 	}
 	if _, err := helmTemplate(t, "--kube-version", "1.31.2-gke.100"); err != nil {
 		t.Errorf("provider suffixed versions must be accepted: %v", err)

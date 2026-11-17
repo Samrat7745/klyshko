@@ -17,11 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
-
-// DefaultRequestTimeout bounds each request to Castor so that a stalled service cannot block a reconciliation forever.
-const DefaultRequestTimeout = 60 * time.Second
 
 // Client is a client for the Castor tuple store.
 type Client struct {
@@ -33,7 +29,7 @@ type Client struct {
 func NewClient(url string) *Client {
 	return &Client{
 		URL:    url,
-		client: &http.Client{Timeout: DefaultRequestTimeout},
+		client: &http.Client{},
 	}
 }
 

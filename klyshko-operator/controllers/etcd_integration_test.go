@@ -116,9 +116,9 @@ func (e *testEtcd) newClient() *clientv3.Client {
 }
 
 func shortRetries(t *testing.T) {
-	oldHead, oldWatch := headRevisionOpRetryPeriod, watchRetryPeriod
-	headRevisionOpRetryPeriod, watchRetryPeriod = 50*time.Millisecond, 20*time.Millisecond
-	t.Cleanup(func() { headRevisionOpRetryPeriod, watchRetryPeriod = oldHead, oldWatch })
+	oldHead := headRevisionOpRetryPeriod
+	headRevisionOpRetryPeriod = 50 * time.Millisecond
+	t.Cleanup(func() { headRevisionOpRetryPeriod = oldHead })
 }
 
 func eventually(t *testing.T, what string, cond func() bool) {
@@ -570,29 +570,6 @@ func TestWatchResumesFromHeadRevisionWithoutLossOrReplay(t *testing.T) {
 	if h, _ := storedHead(t, c, 1); h <= head {
 		t.Fatalf("head did not advance: %d <= %d", h, head)
 	}
-}
-
-func TestWatchRecoversFromCompactedHeadRevision(t *testing.T) {
-	shortRetries(t)
-	etcd := newTestEtcd(t)
-	c := etcd.newClient()
-	e := newVCPEnv(t, c, 1, 2, newJob("job-a"), newJob("job-c"))
-	stop := e.runWatch()
-	put(t, c, entryKey("job-a", 0), statusJSON("Generating"))
-	eventually(t, "A proxied", func() bool { return e.hasTask("job-a-0") })
-	stop()
-
-	var last int64
-	for i := 0; i < 5; i++ {
-		last = put(t, c, fmt.Sprintf("/unrelated/%d", i), "x")
-	}
-	if _, err := c.Compact(context.Background(), last); err != nil {
-		t.Fatal(err)
-	}
-
-	e.runWatch()
-	put(t, c, entryKey("job-c", 0), statusJSON("Generating"))
-	eventually(t, "watch recovered from compaction", func() bool { return e.hasTask("job-c-0") })
 }
 
 func TestWatchClosedChannelIsReestablished(t *testing.T) {

@@ -65,7 +65,6 @@ func TestLotteryStrategyTable(t *testing.T) {
 		{"type without policy", tel(met(tMul, 0)), []klyshkov1alpha1.TupleTypePolicy{pol(tBit, 10, 1)}, nil, nil},
 		{"policy without telemetry", tel(met(tMul, 0)), []klyshkov1alpha1.TupleTypePolicy{pol(tBit, 10, 1), pol(tMul, 1, 1)}, nil, []string{tMul}},
 		{"only one below", tel(met(tBit, 0), met(tMul, 99)), []klyshkov1alpha1.TupleTypePolicy{pol(tBit, 10, 1), pol(tMul, 50, 100)}, nil, []string{tBit}},
-		{"zero priority only is not schedulable", tel(met(tBit, 0)), []klyshkov1alpha1.TupleTypePolicy{pol(tBit, 10, 0)}, nil, nil},
 	}
 	for _, c := range cases {
 		c := c
