@@ -8,8 +8,8 @@ package controllers
 
 import (
 	"context"
-	"github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/castor"
+	"github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	//+kubebuilder:scaffold:imports

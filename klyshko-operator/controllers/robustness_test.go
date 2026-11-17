@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 )
 

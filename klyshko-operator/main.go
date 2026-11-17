@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/carbynestack/klyshko/castor"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -28,8 +28,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/controllers"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

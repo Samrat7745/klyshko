@@ -11,8 +11,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/carbynestack/klyshko/castor"
-	"github.com/carbynestack/klyshko/logging"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
+	"github.com/Samrat7745/klyshko/klyshko-operator/logging"
 	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
 )
 
 // PeriodicReconciliationDuration is the maximum time between two successive reconciliations

@@ -31,8 +31,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/castor"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
 )
 
 // testEtcd is an embedded etcd server that can be stopped and restarted on the same address and data directory.

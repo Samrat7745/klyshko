@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/carbynestack/klyshko/logging"
+	"github.com/Samrat7745/klyshko/klyshko-operator/logging"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
 )
 
 const (

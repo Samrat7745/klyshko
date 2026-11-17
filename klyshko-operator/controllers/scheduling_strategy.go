@@ -9,9 +9,9 @@ package controllers
 
 import (
 	"context"
-	"github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/castor"
-	"github.com/carbynestack/klyshko/logging"
+	"github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
+	"github.com/Samrat7745/klyshko/klyshko-operator/logging"
 	"math/rand"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )

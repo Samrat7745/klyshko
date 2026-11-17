@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/castor"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"

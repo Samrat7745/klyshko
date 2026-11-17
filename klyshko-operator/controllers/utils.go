@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package controllers
 
 import (
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
 	"strconv"
 	"strings"
 )

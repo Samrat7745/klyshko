@@ -11,7 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/carbynestack/klyshko/logging"
+	"github.com/Samrat7745/klyshko/klyshko-operator/logging"
 	"github.com/google/uuid"
 	"io"
 	"io/ioutil"

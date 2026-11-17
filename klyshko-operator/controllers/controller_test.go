@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	klyshkov1alpha1 "github.com/carbynestack/klyshko/api/v1alpha1"
-	"github.com/carbynestack/klyshko/castor"
+	klyshkov1alpha1 "github.com/Samrat7745/klyshko/klyshko-operator/api/v1alpha1"
+	"github.com/Samrat7745/klyshko/klyshko-operator/castor"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo/v2"

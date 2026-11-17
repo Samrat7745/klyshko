@@ -1,5 +1,4 @@
-module github.com/carbynestack/klyshko
-
+module github.com/Samrat7745/klyshko/klyshko-operator
 go 1.26.10
 
 require (
